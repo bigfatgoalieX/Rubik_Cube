@@ -1,6 +1,5 @@
-#include <SFML/Graphics.hpp>
-#include <vector>
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -13,6 +12,7 @@ public:
     vector<vector<char>> up;
     vector<vector<char>> down;
 
+    // constructor function   
     RubiksCube() {
         front = vector<vector<char>>(3, vector<char>(3, 'G')); // Green
         back = vector<vector<char>>(3, vector<char>(3, 'B'));  // Blue
@@ -20,6 +20,33 @@ public:
         right = vector<vector<char>>(3, vector<char>(3, 'R')); // Red
         up = vector<vector<char>>(3, vector<char>(3, 'W'));    // White
         down = vector<vector<char>>(3, vector<char>(3, 'Y'));  // Yellow
+    }
+
+    // why '&'?
+    // 为了避免拷贝，传递引用可以减少内存开销
+    // 为了修改原始数据，传递引用可以直接修改原始数据
+    void printFace(vector<vector<char>>& face) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                cout << face[i][j] << ' ';
+            }
+            cout << endl;
+        }
+    }
+
+    void printCube() {
+        cout << "Up:\n";
+        printFace(up);
+        cout << "Front:\n";
+        printFace(front);
+        cout << "Right:\n";
+        printFace(right);
+        cout << "Back:\n";
+        printFace(back);
+        cout << "Left:\n";
+        printFace(left);
+        cout << "Down:\n";
+        printFace(down);
     }
 
     void rotateFaceClockwise(vector<vector<char>>& face) {
@@ -31,82 +58,76 @@ public:
         }
     }
 
+void rotateFaceEdgesClockwise(vector<vector<char>>& face, 
+                                   vector<vector<char>>& up, int upRow, 
+                                   vector<vector<char>>& right, int rightCol, 
+                                   vector<vector<char>>& down, int downRow, 
+                                   vector<vector<char>>& left, int leftCol) {
+        vector<char> temp = {up[upRow][0], up[upRow][1], up[upRow][2]};
+
+        up[upRow][0] = left[2][leftCol];
+        up[upRow][1] = left[1][leftCol];
+        up[upRow][2] = left[0][leftCol];
+
+        left[0][leftCol] = down[downRow][0];
+        left[1][leftCol] = down[downRow][1];
+        left[2][leftCol] = down[downRow][2];
+
+        down[downRow][0] = right[2][rightCol];
+        down[downRow][1] = right[1][rightCol];
+        down[downRow][2] = right[0][rightCol];
+
+        right[0][rightCol] = temp[0];
+        right[1][rightCol] = temp[1];
+        right[2][rightCol] = temp[2];
+    }
+
     void rotateFrontClockwise() {
         rotateFaceClockwise(front);
-        // Adjust adjacent edges
-        vector<char> temp = {up[2][0], up[2][1], up[2][2]};
-        up[2][0] = left[2][2];
-        up[2][1] = left[1][2];
-        up[2][2] = left[0][2];
-        left[0][2] = down[0][0];
-        left[1][2] = down[0][1];
-        left[2][2] = down[0][2];
-        down[0][0] = right[2][0];
-        down[0][1] = right[1][0];
-        down[0][2] = right[0][0];
-        right[0][0] = temp[0];
-        right[1][0] = temp[1];
-        right[2][0] = temp[2];
+        rotateFaceEdgesClockwise(front, up, 2, right, 0, down, 0, left, 2);
     }
 
-    void drawFace(sf::RenderWindow& window, vector<vector<char>>& face, int offsetX, int offsetY) {
-        int size = 50;
-        for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                sf::RectangleShape square(sf::Vector2f(size, size));
-                square.setPosition(offsetX + j * size, offsetY + i * size);
-                square.setFillColor(getColor(face[i][j]));
-                square.setOutlineThickness(1);
-                square.setOutlineColor(sf::Color::Black);
-                window.draw(square);
+    void rotateBackClockwise() {
+        rotateFaceClockwise(back);
+        rotateFaceEdgesClockwise(back, up, 0, left, 0, down, 2, right, 2);
+    }
+
+    void rotateLeftClockwise() {
+        rotateFaceClockwise(left);
+        rotateFaceEdgesClockwise(left, up, 0, front, 0, down, 0, back, 2);
+    }
+
+    void rotateRightClockwise() {
+        rotateFaceClockwise(right);
+        rotateFaceEdgesClockwise(right, up, 2, back, 0, down, 2, front, 2);
+    }
+
+    void rotateUpClockwise() {
+        rotateFaceClockwise(up);
+        rotateFaceEdgesClockwise(up, back, 2, right, 0, front, 0, left, 0);
+    }
+
+    void rotateDownClockwise() {
+        rotateFaceClockwise(down);
+        rotateFaceEdgesClockwise(down, front, 2, right, 2, back, 0, left, 2);
+    }
+
+    void printFace(const vector<vector<char>>& face) {
+        for (const auto& row : face) {
+            for (const auto& elem : row) {
+                cout << elem << ' ';
             }
+            cout << endl;
         }
-    }
-
-    sf::Color getColor(char c) {
-        switch (c) {
-            case 'G': return sf::Color::Green;
-            case 'B': return sf::Color::Blue;
-            case 'O': return sf::Color(255, 165, 0); // Orange
-            case 'R': return sf::Color::Red;
-            case 'W': return sf::Color::White;
-            case 'Y': return sf::Color::Yellow;
-            default: return sf::Color::Black;
-        }
-    }
-
-    void drawCube(sf::RenderWindow& window) {
-        drawFace(window, front, 150, 150); // Center face
-        drawFace(window, up, 150, 0);      // Top face
-        drawFace(window, left, 0, 150);    // Left face
-        drawFace(window, right, 300, 150); // Right face
-        drawFace(window, down, 150, 300);  // Bottom face
-        drawFace(window, back, 450, 150);  // Back face (for simplicity, drawn separately)
     }
 };
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode(600, 600), "Rubik's Cube Simulator");
-
     RubiksCube cube;
-
-    while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
-                window.close();
-            }
-            if (event.type == sf::Event::KeyPressed) {
-                if (event.key.code == sf::Keyboard::F) {
-                    cube.rotateFrontClockwise();
-                }
-            }
-        }
-
-        window.clear();
-        cube.drawCube(window);
-        window.display();
-    }
+    cube.printFace(cube.front);
+    cout << "\nRotating front face clockwise...\n\n";
+    cube.rotateFrontClockwise();
+    cube.printCube();
 
     return 0;
 }
